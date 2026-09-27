@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chrono Precision - Le Reflex Perfect</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-mono-digits {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Neon glowing effects */
+        .glow-cyan {
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
+        }
+        .glow-green {
+            box-shadow: 0 0 35px rgba(34, 197, 94, 0.5);
+        }
+        .glow-red {
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.5);
+        }
+        .glow-gold {
+            box-shadow: 0 0 35px rgba(245, 158, 11, 0.5);
+        }
+        /* Pulse animations */
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.98); opacity: 0.9; }
+        }
+        .animate-pulse-fast {
+            animation: pulse-fast 0.6s infinite ease-in-out;
+        }
+        /* Strobe background effect for hard levels */
+        @keyframes strobe-bg {
+            0%, 100% { background-color: rgba(15, 23, 42, 1); }
+            50% { background-color: rgba(30, 27, 75, 1); }
+        }
+        .distraction-strobe {
+            animation: strobe-bg 0.35s infinite alternate;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-x-hidden bg-slate-950 text-slate-100 select-none">
+
+    <!-- Header / Top Bar -->
+    <header class="w-full max-w-md mx-auto p-4 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <i class="fa-solid fa-stopwatch text-slate-950 text-xl font-bold"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">CHRONO</h1>
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold -mt-1">Precision Arcade</p>
+            </div>
+        </div>
+        
+        <!-- Controls Header Buttons -->
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-all active:scale-95 shadow-md" title="Son Actif/Muet">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-cyan-400 w-5 h-5 flex items-center justify-center"></i>
+            </button>
+            <button id="resetStatsBtn" class="p-3 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-all active:scale-95 shadow-md" title="Effacer Records">
+                <i class="fa-solid fa-trash-can w-5 h-5 flex items-center justify-center"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-md mx-auto px-4 flex flex-col justify-center items-center gap-5 z-10">
+        
+        <!-- Level & Record Cards -->
+        <div class="w-full grid grid-cols-2 gap-3">
+            <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-3.5 text-center flex flex-col items-center shadow-lg">
+                <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Niveau</span>
+                <span id="levelDisplay" class="text-2xl font-black text-cyan-400">1</span>
+            </div>
+            <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-3.5 text-center flex flex-col items-center shadow-lg">
+                <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Meilleur Écart</span>
+                <span id="highScoreDisplay" class="text-2xl font-black text-amber-400 font-mono-digits">--.--s</span>
+            </div>
+        </div>
+
+        <!-- Target Time Display Box -->
+        <div class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center shadow-xl relative overflow-hidden">
+            <div id="maskBadge" class="hidden absolute top-2.5 right-3 bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <i class="fa-solid fa-eye-slash"></i> MASKED
+            </div>
+            <div id="distractBadge" class="hidden absolute top-2.5 left-3 bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <i class="fa-solid fa-bolt"></i> DISTRACTION
+            </div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cible à Atteindre</p>
+            <div id="targetDisplay" class="text-4xl sm:text-5xl font-black text-slate-100 font-mono-digits tracking-tight">
+                05.000<span class="text-xl text-slate-500">s</span>
+            </div>
+        </div>
+
+        <!-- Main Chrono Display Area -->
+        <div id="timerContainer" class="w-full aspect-[16/9] bg-slate-900 border-2 border-slate-800 rounded-3xl flex flex-col items-center justify-center p-6 relative transition-all duration-300 shadow-2xl">
+            <p id="timerStatus" class="text-xs font-semibold text-cyan-400 tracking-widest uppercase mb-2">Prêt à jouer ?</p>
+            
+            <!-- Dynamic Chrono Text -->
+            <div id="timerDisplay" class="text-5xl sm:text-6xl font-black font-mono-digits tracking-normal text-slate-100 transition-opacity duration-200">
+                00.000<span class="text-2xl text-slate-500">s</span>
+            </div>
+
+            <!-- Instant Accuracy Feedback -->
+            <div id="resultFeedback" class="absolute bottom-3 flex flex-col items-center opacity-0 transition-all duration-300 transform translate-y-2">
+                <span id="feedbackText" class="text-sm font-black tracking-wider uppercase"></span>
+                <span id="diffText" class="text-xs font-mono-digits font-bold text-slate-300"></span>
+            </div>
+        </div>
+
+        <!-- Controls Buttons Area -->
+        <div class="w-full flex justify-center items-center min-h-[85px]">
+            <!-- Start / Stop Button -->
+            <button id="actionBtn" class="w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-cyan transition-all transform active:scale-95 flex items-center justify-center gap-3">
+                <i id="actionBtnIcon" class="fa-solid fa-play"></i>
+                <span id="actionBtnText">START</span>
+            </button>
+
+            <!-- Reset / Next Level Button -->
+            <button id="resetBtn" class="hidden w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-green transition-all transform active:scale-95 flex items-center justify-center gap-3">
+                <i id="resetBtnIcon" class="fa-solid fa-forward"></i>
+                <span id="resetBtnText">SUIVANT</span>
+            </button>
+        </div>
+
+        <!-- Attempts History Panel -->
+        <div class="w-full bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Derniers Essais</span>
+                <span class="text-[10px] text-slate-500">Précision (ms)</span>
+            </div>
+            <ul id="historyList" class="space-y-1.5 min-h-[90px] flex flex-col justify-start">
+                <li class="text-xs text-slate-600 text-center py-6 italic">Aucune tentative pour l'instant</li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-md mx-auto p-4 text-center text-xs text-slate-600 z-10">
+        <p>Astuce : Appuyez sur <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">Espace</kbd> pour démarrer / stopper !</p>
+    </footer>
+
+    <script>
+        // Game State Variables
+        let gameState = 'IDLE'; // 'IDLE', 'RUNNING', 'STOPPED'
+        let targetTimeMs = 5000;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let animationFrameId = null;
+        let currentLevel = 1;
+        let highScoreMs = localStorage.getItem('chrono_precision_highscore') ? parseFloat(localStorage.getItem('chrono_precision_highscore')) : null;
+        let soundEnabled = true;
+        let history = JSON.parse(localStorage.getItem('chrono_precision_history') || '[]');
+
+        // UI Element References
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timerContainer = document.getElementById('timerContainer');
+        const timerStatus = document.getElementById('timerStatus');
+        const targetDisplay = document.getElementById('targetDisplay');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const actionBtn = document.getElementById('actionBtn');
+        const actionBtnText = document.getElementById('actionBtnText');
+        const actionBtnIcon = document.getElementById('actionBtnIcon');
+        const resetBtn = document.getElementById('resetBtn');
+        const resetBtnText = document.getElementById('resetBtnText');
+        const resetBtnIcon = document.getElementById('resetBtnIcon');
+        const resultFeedback = document.getElementById('resultFeedback');
+        const feedbackText = document.getElementById('feedbackText');
+        const diffText = document.getElementById('diffText');
+        const historyList = document.getElementById('historyList');
+        const maskBadge = document.getElementById('maskBadge');
+        const distractBadge = document.getElementById('distractBadge');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const resetStatsBtn = document.getElementById('resetStatsBtn');
+
+        // Web Audio Context Synthesizer
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Haptic Vibration Feedback
+        function triggerHaptic(type) {
+            if (!('vibrate' in navigator)) return;
+            if (type === 'tap') navigator.vibrate(20);
+            else if (type === 'perfect') navigator.vibrate([40, 60, 80]);
+            else if (type === 'fail') navigator.vibrate([100, 50, 100]);
+        }
+
+        // Audio Effects Generator using Web Audio API
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'tick') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(650, now);
+                gain.gain.setValueAtTime(0.04, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                osc.start(now);
+                osc.stop(now + 0.04);
+            } else if (type === 'stop') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(500, now);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'perfect') {
+                // Victory Melody
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const subOsc = audioCtx.createOscillator();
+                    const subGain = audioCtx.createGain();
+                    subOsc.type = 'triangle';
+                    subOsc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                    subGain.gain.setValueAtTime(0.12, now + idx * 0.07);
+                    subGain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.2);
+                    subOsc.connect(subGain);
+                    subGain.connect(audioCtx.destination);
+                    subOsc.start(now + idx * 0.07);
+                    subOsc.stop(now + idx * 0.07 + 0.2);
+                });
+            } else if (type === 'fail') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(90, now + 0.25);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        // Format MS to 00.000 string
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const remainder = Math.floor(ms % 1000);
+            const secStr = String(seconds).padStart(2, '0');
+            const msStr = String(remainder).padStart(3, '0');
+            return `${secStr}.${msStr}`;
+        }
+
+        function setupLevel() {
+            if (currentLevel === 1) {
+                targetTimeMs = 5000;
+            } else if (currentLevel === 2) {
+                targetTimeMs = 4000;
+            } else {
+                // Random Target Time between 3.000s and 6.000s with millisecond step
+                const randomSec = (Math.floor(Math.random() * 30) + 30) / 10;
+                targetTimeMs = randomSec * 1000;
+            }
+
+            // UI Refresh
+            targetDisplay.innerHTML = `${formatTime(targetTimeMs)}<span class="text-xl text-slate-500">s</span>`;
+            levelDisplay.textContent = currentLevel;
+
+            // Display badge indicators based on difficulty level
+            if (currentLevel >= 3) maskBadge.classList.remove('hidden');
+            else maskBadge.classList.add('hidden');
+
+            if (currentLevel >= 5) distractBadge.classList.remove('hidden');
+            else distractBadge.classList.add('hidden');
+
+            resetUIForNewAttempt();
+        }
+
+        function resetUIForNewAttempt() {
+            gameState = 'IDLE';
+            elapsedTime = 0;
+            timerDisplay.innerHTML = `00.000<span class="text-2xl text-slate-500">s</span>`;
+            timerDisplay.style.opacity = '1';
+            timerStatus.textContent = 'Prêt à jouer ?';
+            timerStatus.className = 'text-xs font-semibold text-cyan-400 tracking-widest uppercase mb-2';
+            
+            timerContainer.className = 'w-full aspect-[16/9] bg-slate-900 border-2 border-slate-800 rounded-3xl flex flex-col items-center justify-center p-6 relative transition-all duration-300 shadow-2xl';
+            document.body.classList.remove('distraction-strobe');
+
+            actionBtn.classList.remove('hidden');
+            actionBtn.className = 'w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-cyan transition-all transform active:scale-95 flex items-center justify-center gap-3';
+            actionBtnText.textContent = 'START';
+            actionBtnIcon.className = 'fa-solid fa-play';
+
+            resetBtn.classList.add('hidden');
+            resultFeedback.classList.add('opacity-0', 'translate-y-2');
+        }
+
+        // High Precision Timer Render Loop
+        let lastTickSecond = 0;
+        function updateTimer(timestamp) {
+            if (gameState !== 'RUNNING') return;
+
+            elapsedTime = timestamp - startTime;
+            
+            // Trigger tick sound per second
+            const currentSecond = Math.floor(elapsedTime / 1000);
+            if (currentSecond > lastTickSecond) {
+                playSound('tick');
+                lastTickSecond = currentSecond;
+            }
+
+            // Level 3+ Blind Masking
+            if (currentLevel >= 3 && elapsedTime >= 2000) {
+                timerDisplay.innerHTML = `??.???<span class="text-2xl text-slate-500">s</span>`;
+            } else {
+                timerDisplay.innerHTML = `${formatTime(elapsedTime)}<span class="text-2xl text-slate-500">s</span>`;
+            }
+
+            animationFrameId = requestAnimationFrame(updateTimer);
+        }
+
+        // Start Chrono
+        function startChrono() {
+            initAudio();
+            triggerHaptic('tap');
+            gameState = 'RUNNING';
+            lastTickSecond = 0;
+            startTime = performance.now();
+
+            timerStatus.textContent = 'Chrono en cours...';
+            timerStatus.className = 'text-xs font-semibold text-amber-400 tracking-widest uppercase mb-2 animate-pulse';
+
+            actionBtnText.textContent = 'STOP';
+            actionBtnIcon.className = 'fa-solid fa-stop';
+            actionBtn.className = 'w-full py-5 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-red transition-all transform active:scale-95 flex items-center justify-center gap-3 animate-pulse-fast';
+
+            if (currentLevel >= 5) {
+                document.body.classList.add('distraction-strobe');
+            }
+
+            animationFrameId = requestAnimationFrame(updateTimer);
+        }
+
+        // Stop Chrono & Grade Accuracy
+        function stopChrono() {
+            gameState = 'STOPPED';
+            cancelAnimationFrame(animationFrameId);
+            document.body.classList.remove('distraction-strobe');
+
+            // Display precise final elapsed time
+            timerDisplay.innerHTML = `${formatTime(elapsedTime)}<span class="text-2xl text-slate-500">s</span>`;
+            timerDisplay.style.opacity = '1';
+
+            const diffMs = Math.abs(elapsedTime - targetTimeMs);
+            const diffSec = (diffMs / 1000).toFixed(3);
+
+            // Accuracy tolerance thresholds
+            const isPerfect = diffMs <= 60;   // Margin <= 0.060s
+            const isGood = diffMs <= 180;      // Margin <= 0.180s
+
+            resultFeedback.classList.remove('opacity-0', 'translate-y-2');
+            
+            if (isPerfect) {
+                playSound('perfect');
+                triggerHaptic('perfect');
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+
+                timerContainer.className = 'w-full aspect-[16/9] bg-emerald-950/40 border-2 border-emerald-500 rounded-3xl flex flex-col items-center justify-center p-6 relative transition-all duration-300 shadow-2xl glow-green';
+                timerStatus.textContent = 'EXCELLENT !';
+                timerStatus.className = 'text-xs font-black text-emerald-400 tracking-widest uppercase mb-2';
+                
+                feedbackText.textContent = 'PERFECT !';
+                feedbackText.className = 'text-base font-black text-emerald-400 tracking-wider uppercase';
+                diffText.textContent = `Écart : +${diffSec}s (${Math.round(diffMs)}ms)`;
+
+                resetBtnText.textContent = 'NIVEAU SUIVANT';
+                resetBtnIcon.className = 'fa-solid fa-arrow-right';
+                resetBtn.className = 'w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-green transition-all transform active:scale-95 flex items-center justify-center gap-3';
+                
+                currentLevel++;
+            } else if (isGood) {
+                playSound('stop');
+                triggerHaptic('tap');
+                timerContainer.className = 'w-full aspect-[16/9] bg-cyan-950/40 border-2 border-cyan-500 rounded-3xl flex flex-col items-center justify-center p-6 relative transition-all duration-300 shadow-2xl glow-cyan';
+                timerStatus.textContent = 'PAS MAL !';
+                timerStatus.className = 'text-xs font-black text-cyan-400 tracking-widest uppercase mb-2';
+
+                feedbackText.textContent = 'BIEN JOUÉ !';
+                feedbackText.className = 'text-base font-black text-cyan-400 tracking-wider uppercase';
+                diffText.textContent = `Écart : ${elapsedTime > targetTimeMs ? '+' : '-'}${diffSec}s (${Math.round(diffMs)}ms)`;
+
+                resetBtnText.textContent = 'RÉESSAYER NIVEAU';
+                resetBtnIcon.className = 'fa-solid fa-rotate-right';
+                resetBtn.className = 'w-full py-5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-cyan transition-all transform active:scale-95 flex items-center justify-center gap-3';
+            } else {
+                playSound('fail');
+                triggerHaptic('fail');
+                timerContainer.className = 'w-full aspect-[16/9] bg-rose-950/40 border-2 border-rose-500 rounded-3xl flex flex-col items-center justify-center p-6 relative transition-all duration-300 shadow-2xl glow-red';
+                timerStatus.textContent = 'ÉCHEC !';
+                timerStatus.className = 'text-xs font-black text-rose-400 tracking-widest uppercase mb-2';
+
+                feedbackText.textContent = 'ÉCART TROP GRAND';
+                feedbackText.className = 'text-base font-black text-rose-400 tracking-wider uppercase';
+                diffText.textContent = `Écart : ${elapsedTime > targetTimeMs ? '+' : '-'}${diffSec}s (${Math.round(diffMs)}ms)`;
+
+                currentLevel = 1;
+                resetBtnText.textContent = 'RECOMMENCER';
+                resetBtnIcon.className = 'fa-solid fa-rotate-left';
+                resetBtn.className = 'w-full py-5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-lg glow-red transition-all transform active:scale-95 flex items-center justify-center gap-3';
+            }
+
+            actionBtn.classList.add('hidden');
+            resetBtn.classList.remove('hidden');
+
+            // Highscore evaluation
+            const errorInSec = diffMs / 1000;
+            if (highScoreMs === null || errorInSec < highScoreMs) {
+                highScoreMs = errorInSec;
+                localStorage.setItem('chrono_precision_highscore', highScoreMs.toString());
+                updateHighScoreDisplay();
+            }
+
+            addHistoryRecord(currentLevel, Math.round(diffMs), isPerfect);
+        }
+
+        function updateHighScoreDisplay() {
+            if (highScoreMs !== null) {
+                highScoreDisplay.textContent = `${highScoreMs.toFixed(3)}s`;
+            } else {
+                highScoreDisplay.textContent = '--.--s';
+            }
+        }
+
+        function addHistoryRecord(level, diffMs, isPerfect) {
+            const record = { level, diffMs, timestamp: new Date().toLocaleTimeString() };
+            history.unshift(record);
+            if (history.length > 5) history.pop();
+            localStorage.setItem('chrono_precision_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = `<li class="text-xs text-slate-600 text-center py-6 italic">Aucune tentative pour l'instant</li>`;
+                return;
+            }
+
+            historyList.innerHTML = history.map(item => `
+                <li class="flex justify-between items-center bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-800 text-xs">
+                    <span class="text-slate-400 font-medium">Niveau ${item.level}</span>
+                    <span class="font-mono-digits font-bold ${item.diffMs <= 60 ? 'text-emerald-400' : item.diffMs <= 180 ? 'text-cyan-400' : 'text-rose-400'}">
+                        ${item.diffMs <= 60 ? '★ ' : ''}${item.diffMs} ms
+                    </span>
+                </li>
+            `).join('');
+        }
+
+        // Action Trigger
+        function handleMainAction() {
+            if (gameState === 'IDLE') startChrono();
+            else if (gameState === 'RUNNING') stopChrono();
+        }
+
+        // Event Listeners
+        actionBtn.addEventListener('click', handleMainAction);
+
+        resetBtn.addEventListener('click', () => {
+            triggerHaptic('tap');
+            setupLevel();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'STOPPED') setupLevel();
+                else handleMainAction();
+            }
+        });
+
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high text-cyan-400 w-5 h-5 flex items-center justify-center' : 'fa-solid fa-volume-xmark text-slate-600 w-5 h-5 flex items-center justify-center';
+        });
+
+        resetStatsBtn.addEventListener('click', () => {
+            if (confirm('Voulez-vous réinitialiser votre record et votre historique ?')) {
+                localStorage.removeItem('chrono_precision_highscore');
+                localStorage.removeItem('chrono_precision_history');
+                highScoreMs = null;
+                history = [];
+                updateHighScoreDisplay();
+                renderHistory();
+            }
+        });
+
+        // App Initialization
+        window.onload = function() {
+            updateHighScoreDisplay();
+            renderHistory();
+            setupLevel();
+        };
+    </script>
+</body>
+</html>
